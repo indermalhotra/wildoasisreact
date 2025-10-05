@@ -13,6 +13,13 @@ export default [
         browser: true,
         node: true,
       },
+      parser: require.resolve("@babel/eslint-parser"),
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: [require.resolve("@babel/preset-react")],
+        },
+      },
     },
     plugins: {
       react,
