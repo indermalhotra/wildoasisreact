@@ -1,12 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import Heading from "../ui/Heading";
 import Row from "../ui/Row";
-import { getCabinData } from "../services/apiCabin";
 import CabinTable from "../features/cabins/CabinTable";
-import { useQuery } from "@tanstack/react-query";
+import Button from "../ui/Button";
+import CreateCabinForm from "../features/cabins/CreateCabinForm";
 
 function Cabins() {
- 
+ const [showForm, setShowForm] = useState(false);
   
   return (
     <>
@@ -15,7 +15,9 @@ function Cabins() {
         <p>Filter / Sort</p>
       </Row>
       <Row>
-        <CabinTable></CabinTable>
+        <CabinTable/>
+        <Button onClick={()=>setShowForm(show=>!show)}>Add Cabins</Button>
+        {showForm && <CreateCabinForm/>}
       </Row>
     </>
   );
