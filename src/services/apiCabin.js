@@ -27,28 +27,45 @@ export async function deleteCabin(id) {
   return data;
 }
 
-export async function createCabin(newCabin) {
-  // create cabin
-  const cabinName = newCabin.image[0].name;
+export async function createEditCabin(newCabin, id) {
+  console.log(newCabin,"aaa. newCabin");
+  
+  // 1. create cabin
+  const cabinName = typeof newCabin.image === "string" ? newCabin.image : newCabin.image[0].name;
   const cabinFullName = `${uuidv4()}-${cabinName}`.replaceAll("/", ""); // to create name unique
   const imageURL = `${supabaseUrl}/storage/v1/object/public/cabin-images/${cabinFullName}`; // create url of image
   console.log(imageURL);
-  const { data, error } = await supabase
-    .from("cabine")
-    .insert({ ...newCabin, image: imageURL }) // inserting image key and its value
-    .select();
+  
+  // in case of edit we don't want to upload image again if user has not selected new image
+  const imagePath = typeof newCabin.image === "string" ? newCabin.image : imageURL;
+
+  let query = supabase.from("cabine");
+
+  if (!id) {
+    console.log("aaa. Creating new cabin");
+    // A) Create new cabin
+    query.insert({ ...newCabin, image: imagePath }); // inserting image key and its value
+  } else {
+    console.log("aaa. Editing existing cabin");
+    // B) Edit existing cabin
+    query
+      .update({ ...newCabin, image: imagePath })
+      .eq("id", id)
+      .select();
+  }
+
+  const { data, error } = await query.select();
 
   if (error) {
     throw new Error("Cabin could not be created");
   }
 
-  // Upload image
+  //2. Upload image
   const { error: storageErr } = await supabase.storage
     .from("cabin-images") // name of the bucket in supabase
     .upload(cabinFullName, newCabin.image[0]);
 
-
-  // if any error remove the entry
+  //3. if any error remove the entry
   if (storageErr) {
     const { error: deleteError } = await supabase
       .from("cabine")
@@ -67,5 +84,4 @@ export async function createCabin(newCabin) {
 
     throw new Error(`Image upload failed: ${storageErr.message}`);
   }
-
 }

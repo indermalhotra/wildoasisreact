@@ -8,7 +8,7 @@ import FileInput from "../../ui/FileInput";
 import Textarea from "../../ui/Textarea";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCabin } from "../../services/apiCabin";
+import { createEditCabin } from "../../services/apiCabin";
 import toast from "react-hot-toast";
 
 const FormRow = styled.div`
@@ -47,17 +47,22 @@ const Error = styled.span`
   color: var(--color-red-700);
 `;
 
-function CreateCabinForm() {
+function CreateCabinForm({cabinToEdit = {}}) {
+  console.log(cabinToEdit,"cabin to edit");
+
+  const {id:editId, ...editValue} = cabinToEdit;
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, getValues, formState } = useForm();
+  const { register, handleSubmit, reset, getValues, formState } = useForm({
+    defaultValues: editValue,
+  });
 
   const { errors } = formState;
 
   console.log(errors);
 
-  const { mutate, isLoading: isCreating } = useMutation({
-    mutationFn: (newCabin) => createCabin(newCabin),
+  const { mutate: createCabin, isLoading: isCreating } = useMutation({
+    mutationFn: (newCabin) => createEditCabin(newCabin),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cabins"] });
       toast.success("Cabin created successfully");
@@ -65,6 +70,20 @@ function CreateCabinForm() {
     },
     onError: (error) => toast.error(error.message),
   });
+
+  const { mutate:editCabin, isLoading: isEditing } = useMutation({
+
+    // mutation fn always accept one argument if there is multiple arguments then we can pass object
+    mutationFn: ({newCabin, id}) => createEditCabin(newCabin,id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cabins"] });
+      toast.success("Cabin edited successfully");
+      reset();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  let isWorking = isCreating || isEditing;
 
   // temprary functio to auto fill data
   function autoFillForm() {
@@ -80,7 +99,10 @@ function CreateCabinForm() {
   }
 
   function onSubmit(data) {
-    mutate(data);
+    
+    if(editId) editCabin(data, data.id);
+
+    else createCabin(data);
   }
 
   function onError(errors) {
@@ -167,16 +189,16 @@ function CreateCabinForm() {
 
       <FormRow>
         <Label htmlFor="image">Cabin photo</Label>
-        <FileInput id="image" accept="image/*" {...register("image")} />
+        <FileInput id="image" accept="image/*" {...register("image", {
+          required: editId ? false : "Image is required",
+        })} />
       </FormRow>
 
       <FormRow>
         {/* type is an HTML attribute! */}
-        <Button variation="secondary" type="reset">
-          Cancel
-        </Button>
-        <Button>Edit cabin</Button>
-        <Button onClick={()=>autoFillForm()}>Auto fill</Button>
+        {!editId && <Button variation="secondary" type="reset">Cancel</Button>}
+        <Button>{editId ? "Edit Cabin" : "Create Cabin"}</Button>
+        {!editId && <Button onClick={()=>autoFillForm()}>Auto fill</Button>}
       </FormRow>
     </Form>
   );
